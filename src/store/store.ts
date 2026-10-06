@@ -3,11 +3,13 @@ import type {
   CertificateRecord,
   CoreReturn,
   CustomsDeclaration,
+  ExchangeRateSnapshot,
   InstalledPart,
   LedgerEntry,
   OutboxMessage,
   PartStock,
   Reservation,
+  WarrantyClaim,
   WorkOrder,
   ExternalEvent,
 } from '../domain/types.js';
@@ -63,6 +65,13 @@ export class Store {
   addLedger(entry: Omit<LedgerEntry, 'id' | 'createdAt'>): void {
     this.ledger.push({ ...entry, id: this.nextId('ledger'), createdAt: this.now() });
   }
-  readonly warrantyClaims = new Map<string, import('../domain/types.js').WarrantyClaim>();
+  readonly warrantyClaims = new Map<string, WarrantyClaim>();
+  /** Live rates keyed by currency; read exactly once, when a claim is approved. */
   readonly exchangeRates = new Map<string, number>();
+  /** Immutable approval-time rate snapshots keyed by id, indexed by claim. */
+  readonly rateSnapshots = new Map<string, ExchangeRateSnapshot>();
+
+  findLedger(account: string, referenceId: string): LedgerEntry | undefined {
+    return this.ledger.find((entry) => entry.account === account && entry.referenceId === referenceId);
+  }
 }

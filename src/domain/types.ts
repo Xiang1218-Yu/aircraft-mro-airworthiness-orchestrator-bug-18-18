@@ -147,13 +147,42 @@ export interface LedgerEntry {
   createdAt: string;
 }
 
+export type WarrantyClaimStatus = 'SUBMITTED' | 'APPROVED' | 'SETTLED' | 'REJECTED' | 'WITHDRAWN';
+export type WarrantyCallbackAction = 'APPROVE' | 'REJECT' | 'WITHDRAW' | 'SETTLE';
+
 export interface WarrantyClaim {
   id: string;
   tenantId: string;
   workOrderId: string;
   currency: string;
   foreignAmount: number;
-  status: 'APPROVED' | 'SETTLED' | 'REJECTED';
+  status: WarrantyClaimStatus;
   localAmount?: number;
+  /** Copy of the rate captured in the snapshot bound at approval time. */
   exchangeRate?: number;
+  /** Id of the exchange-rate snapshot bound to the claim at approval time. */
+  rateSnapshotId?: string;
+  /** Callback ids already applied, so redelivered callbacks are idempotent. */
+  processedCallbackIds: string[];
+  version: number;
+}
+
+export interface ExchangeRateSnapshot {
+  id: string;
+  tenantId: string;
+  claimId: string;
+  currency: string;
+  /** Unit of the home currency paid per unit of the claim currency. */
+  rate: number;
+  source: string;
+  lockedAt: string;
+}
+
+export interface WarrantyCallback {
+  callbackId: string;
+  claimId: string;
+  action: WarrantyCallbackAction;
+  receivedAt: string;
+  /** Delivered rates are intentionally ignored: settlement always uses the approval snapshot. */
+  rate?: number;
 }
