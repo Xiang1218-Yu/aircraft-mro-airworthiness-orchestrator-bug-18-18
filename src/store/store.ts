@@ -3,6 +3,7 @@ import type {
   CertificateRecord,
   CoreReturn,
   CustomsDeclaration,
+  ExchangeRateSnapshot,
   InstalledPart,
   LedgerEntry,
   OutboxMessage,
@@ -60,9 +61,28 @@ export class Store {
     this.outbox.push({ id: this.nextId('outbox'), tenantId, topic, aggregateId, payload: JSON.stringify(payload), status: 'PENDING', createdAt: this.now() });
   }
 
+  /** Append a ledger entry only if no entry exists for the same account/reference (idempotent on retries). */
+  addLedgerOnce(entry: Omit<LedgerEntry, 'id' | 'createdAt'>): boolean {
+    const exists = this.ledger.some((e) => e.account === entry.account && e.referenceId === entry.referenceId);
+    if (exists) return false;
+    this.addLedger(entry);
+    return true;
+  }
+
+  /** Append an outbox message only if the same topic/aggregate/payload was not already enqueued. */
+  addOutboxOnce(tenantId: string, topic: string, aggregateId: string, payload: unknown): boolean {
+    const serialized = JSON.stringify(payload);
+    const exists = this.outbox.some((m) => m.topic === topic && m.aggregateId === aggregateId && m.payload === serialized);
+    if (exists) return false;
+    this.outbox.push({ id: this.nextId('outbox'), tenantId, topic, aggregateId, payload: serialized, status: 'PENDING', createdAt: this.now() });
+    return true;
+  }
+
   addLedger(entry: Omit<LedgerEntry, 'id' | 'createdAt'>): void {
     this.ledger.push({ ...entry, id: this.nextId('ledger'), createdAt: this.now() });
   }
+
   readonly warrantyClaims = new Map<string, import('../domain/types.js').WarrantyClaim>();
   readonly exchangeRates = new Map<string, number>();
+  readonly exchangeRateSnapshots = new Map<string, ExchangeRateSnapshot>();
 }

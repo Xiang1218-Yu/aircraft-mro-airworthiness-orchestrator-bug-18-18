@@ -147,13 +147,29 @@ export interface LedgerEntry {
   createdAt: string;
 }
 
+export type WarrantyClaimStatus = 'SUBMITTED' | 'APPROVED' | 'SETTLED' | 'REJECTED' | 'WITHDRAWN';
+
+/** Immutable FX rate captured once at approval time; settlement never re-reads live rates. */
+export interface ExchangeRateSnapshot {
+  id: string;
+  tenantId: TenantId;
+  claimId: string;
+  currency: string;
+  rate: number;
+  capturedAt: string;
+}
+
 export interface WarrantyClaim {
   id: string;
   tenantId: string;
   workOrderId: string;
   currency: string;
   foreignAmount: number;
-  status: 'APPROVED' | 'SETTLED' | 'REJECTED';
+  status: WarrantyClaimStatus;
+  /** Snapshot id bound at approval; a settled claim always references exactly one immutable snapshot. */
+  rateSnapshotId?: string;
   localAmount?: number;
   exchangeRate?: number;
+  approvedAt?: string;
+  settledAt?: string;
 }
